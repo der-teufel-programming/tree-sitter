@@ -15,14 +15,13 @@ pub fn build(b: *std.Build) void {
             .target = target,
             .optimize = optimize,
             .link_libc = true,
+            .link_libcpp = true,
         }),
     });
 
-    lib.linkLibC();
-    lib.linkLibCpp();
-    lib.addIncludePath(b.path("tree-sitter/lib/include"));
-    lib.addIncludePath(b.path("tree-sitter/lib/src"));
-    lib.addCSourceFiles(.{ .files = &.{"tree-sitter/lib/src/lib.c"}, .flags = &flags });
+    lib.root_module.addIncludePath(b.path("tree-sitter/lib/include"));
+    lib.root_module.addIncludePath(b.path("tree-sitter/lib/src"));
+    lib.root_module.addCSourceFiles(.{ .files = &.{"tree-sitter/lib/src/lib.c"}, .flags = &flags });
 
     const language_list = .{
         .{ "agda", null },
@@ -132,12 +131,12 @@ fn addParser(b: *std.Build, lib: *std.Build.Step.Compile, comptime lang: []const
     const scanner = srcdir ++ "/scanner.c";
     const scanner_cc = srcdir ++ "/scanner.cc";
 
-    lib.addCSourceFiles(.{ .files = &.{parser}, .flags = &flags });
+    lib.root_module.addCSourceFiles(.{ .files = &.{parser}, .flags = &flags });
     if (exists(b, scanner_cc))
-        lib.addCSourceFiles(.{ .files = &.{scanner_cc}, .flags = &flags });
+        lib.root_module.addCSourceFiles(.{ .files = &.{scanner_cc}, .flags = &flags });
     if (exists(b, scanner))
-        lib.addCSourceFiles(.{ .files = &.{scanner}, .flags = &flags });
-    lib.addIncludePath(b.path(srcdir));
+        lib.root_module.addCSourceFiles(.{ .files = &.{scanner}, .flags = &flags });
+    lib.root_module.addIncludePath(b.path(srcdir));
 
     if (exists(b, qrydir)) {
         b.installDirectory(.{
@@ -150,7 +149,7 @@ fn addParser(b: *std.Build, lib: *std.Build.Step.Compile, comptime lang: []const
 }
 
 fn exists(b: *std.Build, path: []const u8) bool {
-    std.fs.cwd().access(b.pathFromRoot(path), .{ .mode = .read_only }) catch return false;
+    std.Io.Dir.cwd().access(b.graph.io, b.pathFromRoot(path), .{ .read = true }) catch return false;
     return true;
 }
 
